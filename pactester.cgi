@@ -1,6 +1,22 @@
 #!/usr/bin/perl -T
 
 # Author:  (c) 2013 Bennett Perkins
+#
+# Copyright 2013 Bennett Perkins
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+#
+
 
 use POSIX;
 use English qw(-no_match_vars);
@@ -15,7 +31,7 @@ use warnings;
 delete @ENV{qw(PATH IFS CDPATH ENV BASH_ENV)};
 
 # defaults
-my $default_pac = 'http://isd.det.wa.edu.au/isd/centraloffice.pac';
+my $default_pac = 'http://wpad.com/wpad.dat';
 my $default_url = 'http://www.google.com';
 my $default_ip  = '10.25.64.100';
 
