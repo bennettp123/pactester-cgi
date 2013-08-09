@@ -1,6 +1,8 @@
 # pactester-cgi
 
-Frontend to pactester: https://code.google.com/p/pacparser/
+CGI frontend to pactester: https://code.google.com/p/pacparser/
+
+Requires perl and pactester.
 
 # installation
 
