@@ -131,6 +131,9 @@ my $css = q/
 		font-size: 4em;
 		padding-top: 0.5em;
 	}
+	a, a:hover, a:visited, a:active, a:focus {
+		color: darkblue;
+	}
 	.result {
 		font-family: monospace, serif;
 		font-size: 12pt;
@@ -263,9 +266,9 @@ if($sub) {
 
 	# print summary
 	print p,p({-class=>'result_s'}),qq'PAC: <a onclick="toggle_pacview()" href="#">$pac</a>',
-		pre({style=>'display:none',id=>'pacview'},"<code>$pac_contents</code>"),
 		p({-class=>'result_s'}),"URL: ",a({href=>$url},$url),
-		p({-class=>'result_s'}),"Client IP: $ip",p;
+		p({-class=>'result_s'}),"Client IP: $ip",
+		pre({style=>'display:none',id=>'pacview'},"<code>$pac_contents</code>"),p;
 	if ($exarg) { print br,'Microsoft Extensions enabled.'; }
 	print p;
 	
