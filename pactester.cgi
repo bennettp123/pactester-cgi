@@ -227,7 +227,7 @@ my $toggle_pacview = q[
 print header('text/html'),
 	start_html(-title=>'pactester', -style=>{-code=>$css}, -script=>$toggle_pacview),
 	h1('pactester'),
-	start_form(-method=>'GET'),p,
+	start_form(-method=>'POST'),p,
 	'PAC to test: ', textfield(-name=>'pac', -value=>$pac),p,
 	'Hostname or URL to test: ', textfield(-name=>'url', -value=>$url),p,
 	'Client IP: ', textfield(-name=>'ip', -value=>$ip),p,
@@ -242,13 +242,13 @@ if($sub) {
 	# fetch pacfile
 	my $ff = File::Fetch->new(uri => $pac);
 	if (!$ff) {
-		print p({class=>'error'},"Error: Bad PAC: $pac_tainted ($!)"),end_html;
+		print p({class=>'error'},"Error: Bad PAC: $pac_tainted ($!)"),hr;
 		goto DONE;
 	}
 	my $where = $ff->fetch(to=>'/tmp');
 	my $pac_contents = '';
 	if (!$where) {
-		print p({class=>'error'},"Error: Could not fetch PAC file: $pac_tainted ($!)"),end_html;
+		print p({class=>'error'},"Error: Could not fetch PAC file: $pac_tainted ($!)"),hr;
 		goto DONE;
 	} else {
 		open(PAC_CONTENTS, '<'.$where) or die "Can't read PAC file: $!";
@@ -309,7 +309,7 @@ if($sub) {
 
 		# print result
 		print p({-class=>'result_h'},'Result: '),
-			pre({-class=>'result'},"<code>$result</code>"),p;
+			pre({-class=>'result'},"<code>$result</code>"),p,hr;
 		close RESULT;
 	}
 
@@ -322,7 +322,7 @@ if($sub) {
 DONE:
 
 # about
-print hr,p,'This tool uses the pactester&nbsp;utility by Manu&nbsp;Garg (available ',
+print p,'This tool uses the pactester&nbsp;utility by Manu&nbsp;Garg (available ',
 		a({href=>'https://code.google.com/p/pacparser/'},'here'),').',p;
 
 # parent is done!
