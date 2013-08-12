@@ -35,6 +35,14 @@ my $default_pac = 'http://wpad.com/wpad.dat';
 my $default_url = 'http://www.google.com';
 my $default_ip  = '10.25.64.100';
 
+# constants
+my $sp = ' ';
+my $nbsp = '&nbsp;';
+my $tab = "\t";
+my $nbtab = $nbsp x 4;
+my $da = '-';
+my $nbda = '&#x2011;';
+
 # params
 my $pac = param('pac');
 my $url = param('url');
@@ -59,20 +67,26 @@ if ($url) {
 	unless (defined($uri->scheme)) {
 		$uri = URI->new("http://$url"); #let's get retarded
 	}
-	if($uri->scheme =~ /http/ or $uri->scheme =~ /ftp/) {
+	if($uri->scheme =~ /http/i or $uri->scheme =~ /ftp/i) {
 		$url = $uri->as_string;
 	} else {
-		$url = 'bad';
+		if ($url =~ /([a-zA-Z0-9\$-_\+\!()*\/?\&]*)/) {
+			$url = $1;
+		} else {
+			$url = 'bad';
+		}
 	}
 } else {
 	$url = $default_url;
 }
 
+my $new_default_ip = remote_addr;
+if (($new_default_ip) and ($new_default_ip ne '127.0.0.1')) {
+	$default_ip = $new_default_ip;
+}
+
 if (!$ip) {
-	$ip = remote_addr;
-	if ($ip eq '127.0.0.1') {
-		$ip = '';
-	}
+	$ip = $default_ip;
 }
 if ($ip) {
 	if ($ip =~ /([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})/) {
@@ -120,17 +134,34 @@ my $css = q/
 	.result {
 		font-family: monospace, serif;
 		font-size: 12pt;
+		margin-top:     0;
+		padding-top:    1pt;
+		padding-bottom: 40pt;
+	}
+	.result_h {
+		margin-bottom:  0;
 		padding-top:    20pt;
-		padding-bottom: 80pt;
+	}
+	.result_s {
+		padding-top:    0;
+		padding-bottom: 0;
+		margin-top:     0;
+		margin-bottom:  0;
 	}
 	input[type="text"] {
 		width: 100%;
 	}
-	p, hr, h1 {
+	pre, p, hr, h1 {
 		width: 60%;
 		margin-left:  auto;
 		margin-right: auto;
 		display: block;
+	}
+	pre {
+		background-color: #eee;
+		padding: 2px;
+		border: 1px #bbb solid;
+		overflow-x: auto;
 	}
 	hr {
 		color: darkgray;
@@ -138,16 +169,19 @@ my $css = q/
 		border: 0;
 		height: 1px;
 	}
+
 	@media (max-width:680px) {
 		h1 {
 			font-size: 3em;
 			padding-top: 0.4em;
 		}
-		p, hr, h1 {
+		pre, p, hr, h1 {
 			width: 80%;
 		}
-		.result {
+		.result_h {
 			padding-top:    20pt;
+		}
+		.result {
 			padding-bottom: 25pt;
 		}
 	}
@@ -156,19 +190,33 @@ my $css = q/
 			font-size: 2em;
 			padding-top: 0.3em;
 		}
-		p, hr, h1 {
+		pre, p, hr, h1 {
 			width: 95%;
 		}
-		.result {
+		.result_h {
 			padding-top:    10pt;
+		}
+		.result {
 			padding-bottom: 15pt;
 		}
 	}
 /;
 
+# show pacfile contents
+my $toggle_pacview = q[
+  function toggle_pacview()
+  {
+    var pacview = document.getElementById('pacview');
+    if (pacview != null)
+    {
+      pacview.style.display = ( pacview.style.display != 'none' ? 'none' : '' );
+    }
+  }
+];
+
 # start printing the html doc
 print header('text/html'),
-	start_html(-title=>'pactester', -style=>{-code=>$css}),
+	start_html(-title=>'pactester', -style=>{-code=>$css}, -script=>$toggle_pacview),
 	h1('pactester'),
 	start_form(-method=>'GET'),p,
 	'PAC to test: ', textfield(-name=>'pac', -value=>$pac),p,
@@ -189,9 +237,16 @@ if($sub) {
 		exit 0;
 	}
 	my $where = $ff->fetch(to=>'/tmp');
+	my $pac_contents = '';
 	if (!$where) {
 		print "Error: Could not fetch PAC $pac",end_html;
 		exit 0;
+	} else {
+		open(PAC_CONTENTS, '<'.$where) or die "Can't read PAC file: $!";
+		while (<PAC_CONTENTS>) {
+			$pac_contents .= $_;
+		}
+		close PAC_CONTENTS;
 	}
 	
 	# -e arg
@@ -207,7 +262,10 @@ if($sub) {
 	}
 
 	# print summary
-	print p,"PAC: ",a({href=>$pac},$pac),br,"URL: ",a({href=>$url},$url),br,"Client IP: $ip";
+	print p,p({-class=>'result_s'}),qq'PAC: <a onclick="toggle_pacview()" href="#">$pac</a>',
+		pre({style=>'display:none',id=>'pacview'},"<code>$pac_contents</code>"),
+		p({-class=>'result_s'}),"URL: ",a({href=>$url},$url),
+		p({-class=>'result_s'}),"Client IP: $ip",p;
 	if ($exarg) { print br,'Microsoft Extensions enabled.'; }
 	print p;
 	
@@ -234,12 +292,6 @@ if($sub) {
 		
 		# read result, add <br> on newline, replace spaces with &nbsp;, etc.
 		my $result = '';
-		my $sp = ' ';
-		my $nbsp = '&nbsp;';
-		my $tab = "\t";
-		my $nbtab = $nbsp x 4;
-		my $da = '-';
-		my $nbda = '&#x2011;';
 		while (<RESULT>) {
 			$_ =~ s/$sp/$nbsp/g;
 			$_ =~ s/$tab/$nbtab/g;
@@ -247,7 +299,7 @@ if($sub) {
 		}
 
 		# print result
-		print p({-class=>'result'}),$result,p,p,hr;
+		print p({-class=>'result_h'},'Result: '),p({-class=>'result'}),$result,p,p,hr;
 		close RESULT;
 	}
 
