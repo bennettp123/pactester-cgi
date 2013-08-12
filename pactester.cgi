@@ -2,6 +2,7 @@
 
 # Author:  (c) 2013 Bennett Perkins
 #
+#
 # Copyright 2013 Bennett Perkins
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +17,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 #
-
 
 use POSIX;
 use English qw(-no_match_vars);
@@ -151,6 +151,11 @@ my $css = q/
 		margin-top:     0;
 		margin-bottom:  0;
 	}
+	.error {
+		padding-tom: 5pt;
+		padding-bottom: 15pt;
+		color: red;
+	}
 	input[type="text"] {
 		width: 100%;
 	}
@@ -236,14 +241,14 @@ if($sub) {
 	# fetch pacfile
 	my $ff = File::Fetch->new(uri => $pac);
 	if (!$ff) {
-		print "Error: Bad PAC $pac",end_html;
-		exit 0;
+		print p({class=>'error'},"Error: Bad PAC $pac"),end_html;
+		goto DONE;
 	}
 	my $where = $ff->fetch(to=>'/tmp');
 	my $pac_contents = '';
 	if (!$where) {
-		print "Error: Could not fetch PAC $pac",end_html;
-		exit 0;
+		print p({class=>'error'},"Error: Could not fetch PAC $pac"),end_html;
+		goto DONE;
 	} else {
 		open(PAC_CONTENTS, '<'.$where) or die "Can't read PAC file: $!";
 		while (<PAC_CONTENTS>) {
@@ -302,7 +307,8 @@ if($sub) {
 		}
 
 		# print result
-		print p({-class=>'result_h'},'Result: '),p({-class=>'result'}),$result,p,p,hr;
+		print p({-class=>'result_h'},'Result: '),
+			pre({-class=>'result'},"<code>$result</code>"),p;
 		close RESULT;
 	}
 
@@ -312,8 +318,10 @@ if($sub) {
 	}
 }
 
+DONE:
+
 # about
-print p,'This tool uses the pactester&nbsp;utility by Manu&nbsp;Garg (available ',
+print hr,p,'This tool uses the pactester&nbsp;utility by Manu&nbsp;Garg (available ',
 		a({href=>'https://code.google.com/p/pacparser/'},'here'),').',p;
 
 # parent is done!
