@@ -45,6 +45,7 @@ my $nbda = '&#x2011;';
 
 # params
 my $pac = param('pac');
+my $pac_tainted = $pac;
 my $url = param('url');
 my $ip  = param('ip');
 my $ex  = param('ex');
@@ -241,13 +242,13 @@ if($sub) {
 	# fetch pacfile
 	my $ff = File::Fetch->new(uri => $pac);
 	if (!$ff) {
-		print p({class=>'error'},"Error: Bad PAC $pac"),end_html;
+		print p({class=>'error'},"Error: Bad PAC: $pac_tainted ($!)"),end_html;
 		goto DONE;
 	}
 	my $where = $ff->fetch(to=>'/tmp');
 	my $pac_contents = '';
 	if (!$where) {
-		print p({class=>'error'},"Error: Could not fetch PAC $pac"),end_html;
+		print p({class=>'error'},"Error: Could not fetch PAC file: $pac_tainted ($!)"),end_html;
 		goto DONE;
 	} else {
 		open(PAC_CONTENTS, '<'.$where) or die "Can't read PAC file: $!";
