@@ -160,7 +160,13 @@ my $css = q/
 	input[type="text"] {
 		width: 100%;
 	}
-	pre, p, hr, h1 {
+	div {
+		padding: 0;
+		border: none;
+		margin-top: 0;
+		margin-bottom: 0;
+	}
+	div, p, hr, h1 {
 		width: 60%;
 		margin-left:  auto;
 		margin-right: auto;
@@ -274,7 +280,7 @@ if($sub) {
 	print p,p({-class=>'result_s'}),qq'PAC: <a onclick="toggle_pacview()" href="#">$pac</a>',
 		p({-class=>'result_s'}),"URL: ",a({href=>$url},$url),
 		p({-class=>'result_s'}),"Client IP: $ip",
-		pre({style=>'display:none',id=>'pacview'},"<code>$pac_contents</code>"),p;
+		div(pre({style=>'display:none',id=>'pacview'},"<code>$pac_contents</code>")),p;
 	if ($exarg) { print br,'Microsoft Extensions enabled.'; }
 	print p;
 	
@@ -308,8 +314,8 @@ if($sub) {
 		}
 
 		# print result
-		print p({-class=>'result_h'},'Result: '),
-			pre({-class=>'result'},"<code>$result</code>"),p,hr;
+		print p({-class=>'result_h'},'Result: '),p,
+			div(pre({-class=>'result'},"<code>$result</code>")),p,hr;
 		close RESULT;
 	}
 
