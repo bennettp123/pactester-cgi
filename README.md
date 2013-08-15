@@ -18,7 +18,6 @@ ScriptAlias /pactest.html /usr/lib/cgi-bin/pactester/pactester.cgi
   Allow from all
 </Directory>
 ```
-
 ## why?
 
 Troubleshooting pac files, duh. :)
