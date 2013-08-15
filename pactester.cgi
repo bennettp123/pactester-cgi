@@ -80,6 +80,7 @@ if ($url) {
 } else {
 	$url = $default_url;
 }
+my $url_host = ( URI->new($url)->can('host') ? URI->new($url)->host : undef );
 
 my $new_default_ip = remote_addr;
 if (($new_default_ip) and ($new_default_ip ne '127.0.0.1')) {
@@ -127,14 +128,18 @@ my $css = q/
 		font-family: sans-serif, serif;
 		font-weight: normal;
 		font-size: 9pt;
+		overflow-y: scroll;
 	}
+
 	h1 {
 		font-size: 4em;
 		padding-top: 0.5em;
 	}
+
 	a, a:hover, a:visited, a:active, a:focus {
 		color: darkblue;
 	}
+
 	.result {
 		font-family: monospace, serif;
 		font-size: 12pt;
@@ -142,42 +147,50 @@ my $css = q/
 		padding-top:    1pt;
 		padding-bottom: 40pt;
 	}
+
 	.result_h {
 		margin-bottom:  0;
 		padding-top:    20pt;
 	}
+
 	.result_s {
 		padding-top:    0;
 		padding-bottom: 0;
 		margin-top:     0;
 		margin-bottom:  0;
 	}
+
 	.error {
 		padding-tom: 5pt;
 		padding-bottom: 15pt;
 		color: red;
 	}
+
 	input[type="text"] {
 		width: 100%;
 	}
+
 	div {
 		padding: 0;
 		border: none;
 		margin-top: 0;
 		margin-bottom: 0;
 	}
+
 	div, p, hr, h1 {
 		width: 60%;
 		margin-left:  auto;
 		margin-right: auto;
 		display: block;
 	}
+
 	pre {
 		background-color: #eee;
 		padding: 2px;
 		border: 1px #bbb solid;
 		overflow-x: auto;
 	}
+
 	hr {
 		color: darkgray;
 		background-color: darkgray;
@@ -200,6 +213,7 @@ my $css = q/
 			padding-bottom: 25pt;
 		}
 	}
+
 	@media (max-width:520px) {
 		h1 {
 			font-size: 2em;
@@ -219,19 +233,27 @@ my $css = q/
 
 # show pacfile contents
 my $toggle_pacview = q[
-  function toggle_pacview()
+  function toggle_view(id)
   {
-    var pacview = document.getElementById('pacview');
-    if (pacview != null)
+    var e = document.getElementById(id);
+    if (e != null)
     {
-      pacview.style.display = ( pacview.style.display != 'none' ? 'none' : '' );
+      e.style.display = ( e.style.display != 'none' ? 'none' : '' );
+    }
+  }
+  function hide_view(id)
+  {
+    var e = document.getElementById(id);
+    if (e != null)
+    {
+      e.style.display = 'none';
     }
   }
 ];
 
 # start printing the html doc
 print header('text/html'),
-	start_html(-title=>'pactester', -style=>{-code=>$css}, -script=>$toggle_pacview),
+	start_html(-title=>'pactester',	-style=>{-code=>$css}, -script=>$toggle_pacview),
 	h1('pactester'),
 	start_form(-method=>'POST'),p,
 	'PAC to test: ', textfield(-name=>'pac', -value=>$pac),p,
@@ -276,21 +298,12 @@ if($sub) {
 		$iparg = '-c';
 	}
 
-	# print summary
-	print p,p({-class=>'result_s'}),qq'PAC: <a onclick="toggle_pacview()" href="#">$pac</a>',
-		p({-class=>'result_s'}),"URL: ",a({href=>$url},$url),
-		p({-class=>'result_s'}),"Client IP: $ip",
-		div(pre({style=>'display:none',id=>'pacview'},"<code>$pac_contents</code>")),p;
-	if ($exarg) { print br,'Microsoft Extensions enabled.'; }
-	print p;
-	
 	# fork a child process to handle pactester launch
-	die "Can't fork: $!" unless defined(my $pid = open(RESULT, '-|'));
-	
-	if (!$pid) {		# child
+	die "Can't fork: $!" unless defined(my $pactester_pid = open(RESULT, '-|'));
+	if (!$pactester_pid) {		# child
 	
 		# redirect stderr
-		open(STDERR, ">&STDOUT");
+		open(STDERR, '>&STDOUT');
 
 		# launch pactester
 		exec '/usr/bin/pactester',
@@ -302,22 +315,58 @@ if($sub) {
 	
 		# child is done!
 		exit 0;
-	
-	} else { 		# parent
-		
-		# read result, add <br> on newline, replace spaces with &nbsp;, etc.
-		my $result = '';
-		while (<RESULT>) {
-			$_ =~ s/$sp/$nbsp/g;
-			$_ =~ s/$tab/$nbtab/g;
-			$result .= $_.br;
+	}
+
+	# fork another child process to get url info
+	die "Can't fork: $!" unless defined(my $urlinfo_pid = open(URLINFO_OUTPUT, '-|'));
+	if (!$urlinfo_pid) {		# child
+
+		# redirect stderr
+		open(STDERR, '>&STDOUT');
+
+		if ($url_host) {
+			exec '/usr/bin/dig', $url_host or die 'exec failed!';
+
+		} else {
+			print 'No further information available.';
 		}
 
-		# print result
-		print p({-class=>'result_h'},'Result: '),p,
-			div(pre({-class=>'result'},"<code>$result</code>")),p,hr;
-		close RESULT;
+		# child is done!
+		exit 0;
 	}
+
+	# print summary
+	print p,p({-class=>'result_s'},qq'PAC: <a onclick='.
+			qq'"hide_view(\'urlview\'); toggle_view(\'pacview\')" href="#">$pac</a>'),
+		p({-class=>'result_s'},qq'URL: <a onclick='.
+			qq'"hide_view(\'pacview\'); toggle_view(\'urlview\')" href="#">$url</a>'),
+		p({-class=>'result_s'},"Client IP: $ip");
+	if ($exarg) { print p({-class=>'result_s'},'Microsoft Extensions enabled.'); }
+	print p;
+
+	# read url info from child
+	my $urlinfo_output = '';
+	while(<URLINFO_OUTPUT>) {
+		$urlinfo_output .= $_;
+	}
+	close URLINFO_OUTPUT;
+
+	# hidden elements for url info and pacfile info
+	print div({id=>'urlview',-style=>'display:none'},pre(code($urlinfo_output))),
+		div({id=>'pacview',-style=>'display:none'},pre(code($pac_contents))),p;
+
+	# read result, add <br> on newline, replace spaces with &nbsp;, etc.
+	my $result = '';
+	while (<RESULT>) {
+		$_ =~ s/$sp/$nbsp/g;
+		$_ =~ s/$tab/$nbtab/g;
+		$result .= $_.br;
+	}
+
+	# print result
+	print p({-class=>'result_h'},'Result: '),p,
+		div(pre({-class=>'result'},"<code>$result</code>")),p,hr;
+	close RESULT;
 
 	# remove tempfile
 	unless (unlink($where)) {
