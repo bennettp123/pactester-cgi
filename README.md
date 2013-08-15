@@ -4,7 +4,7 @@ CGI frontend to pactester: https://code.google.com/p/pacparser/
 
 Requires perl and pactester.
 
-# installation
+## installation
 
 1. Copy pactester.cgi to /usr/lib/cgi-bin/pactester/pactester.cgi
 2. Add the following to httpd.conf:
@@ -19,6 +19,6 @@ ScriptAlias /pactest.html /usr/lib/cgi-bin/pactester/pactester.cgi
 </Directory>
 ```
 
-# why?
+## why?
 
 Troubleshooting pac files, duh. :)
