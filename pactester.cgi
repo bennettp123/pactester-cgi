@@ -30,6 +30,13 @@ use warnings;
 # untaint the environment
 delete @ENV{qw(PATH IFS CDPATH ENV BASH_ENV)};
 
+# try to prevent proxy use
+delete @ENV{qw(http_proxy HTTP_PROXY
+		https_proxy HTTPS_PROXY
+		ftp_proxy FTP_PROXY
+		proxy PROXY
+		rtsp_proxy RTSP_PROXY)};
+
 # defaults
 my $default_pac = 'http://wpad.com/wpad.dat';
 my $default_url = 'http://www.google.com';
@@ -158,6 +165,7 @@ my $css = q/
 		padding-bottom: 0;
 		margin-top:     0;
 		margin-bottom:  0;
+		overflow-x: hidden;
 	}
 
 	.error {
@@ -203,7 +211,7 @@ my $css = q/
 			font-size: 3em;
 			padding-top: 0.4em;
 		}
-		pre, p, hr, h1 {
+		div, p, hr, h1 {
 			width: 80%;
 		}
 		.result_h {
@@ -219,7 +227,7 @@ my $css = q/
 			font-size: 2em;
 			padding-top: 0.3em;
 		}
-		pre, p, hr, h1 {
+		div, p, hr, h1 {
 			width: 95%;
 		}
 		.result_h {
@@ -336,11 +344,11 @@ if($sub) {
 	}
 
 	# print summary
-	print p,p({-class=>'result_s'},qq'PAC: <a onclick='.
+	print p,p({-class=>'result_s'},qq'PAC:&nbsp;<a onclick='.
 			qq'"hide_view(\'urlview\'); toggle_view(\'pacview\')" href="#">$pac</a>'),
-		p({-class=>'result_s'},qq'URL: <a onclick='.
+		p({-class=>'result_s'},qq'URL:&nbsp;<a onclick='.
 			qq'"hide_view(\'pacview\'); toggle_view(\'urlview\')" href="#">$url</a>'),
-		p({-class=>'result_s'},"Client IP: $ip");
+		p({-class=>'result_s'},"Client IP:&nbsp;$ip");
 	if ($exarg) { print p({-class=>'result_s'},'Microsoft Extensions enabled.'); }
 	print p;
 
