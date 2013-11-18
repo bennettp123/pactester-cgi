@@ -333,8 +333,11 @@ if($sub) {
 		open(STDERR, '>&STDOUT');
 
 		if ($url_host) {
-			exec '/usr/bin/dig', $url_host or die 'exec failed!';
-
+			if ($url_host =~ /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\.?$/) {
+				exec '/usr/bin/dig','-x',$url_host,'IN','PTR' or die 'exec failed!';
+			} else {
+				exec '/usr/bin/dig', $url_host or die 'exec failed!';
+			}
 		} else {
 			print 'No further information available.';
 		}
