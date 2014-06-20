@@ -19,13 +19,26 @@
 #
 
 use POSIX;
+use IPC::Open2;
 use English qw(-no_match_vars);
 use CGI qw/:standard remote_addr/;
 use CGI::Carp;
 use File::Fetch;
+use File::Temp qw/tempdir/;;
 use URI;
+use Net::DNS::Resolver;
 use strict;
 use warnings;
+
+# domain search
+my @search_domains =  ( 'schools.internal',
+			'red.schools.internal',
+			'orange.schools.internal',
+			'yellow.schools.internal',
+			'green.schools.internal',
+			'blue.schools.internal',
+			'indigo.schools.internal',
+			'violet.schools.internal' );
 
 # untaint the environment
 delete @ENV{qw(PATH IFS CDPATH ENV BASH_ENV)};
@@ -43,6 +56,8 @@ my $default_url = 'http://www.google.com';
 my $default_ip  = '10.25.64.100';
 
 # constants
+# (not actually constants, but this makes 
+#  them easier to use in regexes)
 my $sp = ' ';
 my $nbsp = '&nbsp;';
 my $tab = "\t";
@@ -52,22 +67,73 @@ my $nbda = '&#x2011;';
 
 # params
 my $pac = param('pac');
-my $pac_tainted = $pac;
 my $url = param('url');
 my $ip  = param('ip');
 my $ex  = param('ex');
 my $sub = param('submit');
 
+# strip whitespace
+if (defined($pac)) { $pac =~ s/^\s+|\s+$//g; }
+my $pac_tainted = $pac;
+if (defined($url)) { $url =~ s/^\s+|\s+$//g; }
+if (defined( $ip)) { $ip  =~ s/^\s+|\s+$//g; }
+if (defined( $ex)) { $ex  =~ s/^\s+|\s+$//g; }
+if (defined($sub)) { $sub =~ s/^\s+|\s+$//g; }
+
 # untaint the params
-if ($pac) { 
+my @hosts_to_test = ();
+if (!$pac) { 
+	$pac = $default_pac;
+} else {
 	my $uri = URI->new($pac);
 	if(defined($uri->scheme) and $uri->scheme =~ /http/) {
 		$pac = $uri->as_string;
 	} else {
-		$pac = 'bad';
+		# not an url; look for school code instead
+		if ($pac =~ /^(e[0-9]{4}s[0-9]{2})$/i) {
+			push @hosts_to_test, "$1sv002.$_" foreach (@search_domains);
+		} elsif ($pac =~ /^e([0-9]{4})s?$/i) {
+			push @hosts_to_test, "e$1s01sv002.$_" foreach (@search_domains);
+		} elsif ($pac =~ /^([0-9]{4})$/) {
+			push @hosts_to_test, "e$1s01sv002.$_" foreach (@search_domains);
+			push @hosts_to_test, "proxy.curric$1.internal";
+			push @hosts_to_test, "proxy.admin$1.internal";
+			push @hosts_to_test, "curric$1-02.curric$1.internal";
+		} elsif ($pac =~ /^curric([0-9]{4})/i) {
+			push @hosts_to_test, "proxy.curric$1.internal";
+			push @hosts_to_test, "proxy.admin$1.internal";
+			push @hosts_to_test, "curric$1-02.curric$1.internal";
+		} elsif ($pac =~ /^admin([0-9]{4})/i) {
+			push @hosts_to_test, "proxy.curric$1.internal";
+			push @hosts_to_test, "proxy.admin$1.internal";
+			push @hosts_to_test, "curric$1-02.curric$1.internal";
+		}
+		if (scalar @hosts_to_test < 1) { $pac = 'bad'; }
+		foreach (@hosts_to_test) {
+			my $res = Net::DNS::Resolver->new;
+			my $found = undef;
+			foreach (@hosts_to_test) {
+				my $proxy_fqdn = $_;
+				my $query = $res->search($proxy_fqdn);
+				next unless $query;
+				foreach my $rr ($query->answer) {
+					if ($rr->type eq 'CNAME') {
+						$proxy_fqdn = $rr->cname;
+						$found = 'yes';
+					}
+					if ($rr->type eq 'A') {
+						$found = 'yes';
+					}
+				}
+				if ($found) {
+					my $uri = URI->new("http://$proxy_fqdn/proxy.pac");
+					$pac = $uri->as_string;
+					last;
+				}
+			}
+			unless ($found) { $pac = 'bad'; }
+		}
 	}
-} else {
-	$pac = $default_pac;
 }
 
 if ($url) {
@@ -263,29 +329,44 @@ my $toggle_pacview = q[
 print header('text/html'),
 	start_html(-title=>'pactester',	-style=>{-code=>$css}, -script=>$toggle_pacview),
 	h1('pactester'),
-	start_form(-method=>'POST'),p,
+	start_form(-method=>'GET'),p,
 	'PAC to test: ', textfield(-name=>'pac', -value=>$pac),p,
 	'Hostname or URL to test: ', textfield(-name=>'url', -value=>$url),p,
 	'Client IP: ', textfield(-name=>'ip', -value=>$ip),p,
 	checkbox(-name=>'ex', -checked=>0, -value=>'on', -label=>'Enable Microsoft Extensions'),p,
 	submit(-name=>'submit', value=>'Submit'),
-	end_form,
-	hr;
+	end_form;
 
-# launch pactester if form was submitted
+# launch pactester if the form was submitted
 if($sub) {
-
+	print hr;
 	# fetch pacfile
-	my $ff = File::Fetch->new(uri => $pac);
+	my $ff = File::Fetch->new(uri=>$pac);
+	TRY_AGAIN: # muahaha
 	if (!$ff) {
 		print p({class=>'error'},"Error: Bad PAC: $pac_tainted ($!)"),hr;
 		goto DONE;
 	}
-	my $where = $ff->fetch(to=>'/tmp');
+	my $dir = tempdir(CLEANUP=>1);
+	my $where = $ff->fetch(to=>$dir);
 	my $pac_contents = '';
 	if (!$where) {
-		print p({class=>'error'},"Error: Could not fetch PAC file: $pac_tainted ($!)"),hr;
-		goto DONE;
+		if ($pac =~ /proxy\.pac$/) {
+			$pac =~ s/proxy\.pac$/wpad.dat/;
+			$ff = File::Fetch->new(uri=>$pac);
+			goto TRY_AGAIN; #yolo
+		} elsif ($pac =~ /wpad\.dat$/) {
+			$pac =~ s/wpad\.dat$/wpad.da_/;
+			$ff = File::Fetch->new(uri=>$pac);
+			goto TRY_AGAIN; 
+		} elsif ($pac =~ /wpad\.da_$/) {
+			$pac =~ s/wpad\.da_$/wpad.da/;
+			$ff = File::Fetch->new(uri=>$pac);
+			goto TRY_AGAIN;
+		} else {
+			print p({class=>'error'},"Error: Could not fetch PAC file: $pac_tainted ($!)"),hr;
+			goto DONE;
+		}
 	} else {
 		open(PAC_CONTENTS, '<'.$where) or die "Can't read PAC file: $!";
 		while (<PAC_CONTENTS>) {
@@ -336,7 +417,7 @@ if($sub) {
 			if ($url_host =~ /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\.?$/) {
 				exec '/usr/bin/dig','-x',$url_host,'IN','PTR' or die 'exec failed!';
 			} else {
-				exec '/usr/bin/dig', $url_host or die 'exec failed!';
+				exec '/usr/bin/dig', $url_host, 'IN', 'ANY' or die 'exec failed!';
 			}
 		} else {
 			print 'No further information available.';
@@ -376,20 +457,25 @@ if($sub) {
 
 	# print result
 	print p({-class=>'result_h'},'Result: '),p,
-		div(pre({-class=>'result'},"<code>$result</code>")),p,hr;
+		div(pre({-class=>'result'},"<code>$result</code>"));
 	close RESULT;
-
+	my $result_error = $?;
+	
 	# remove tempfile
 	unless (unlink($where)) {
 		carp "Warning: Could not delete temp file $where";
 	}
+	
+	# remove tempdir
+	File::Temp::cleanup();
 }
 
 DONE:
 
 # about
-print p,'This tool uses the pactester&nbsp;utility by Manu&nbsp;Garg (available ',
-		a({href=>'https://code.google.com/p/pacparser/'},'here'),').',p;
+print p,hr,p,'This tool uses the pactester&nbsp;utility by Manu&nbsp;Garg ',
+	'(available ',a({href=>'https://code.google.com/p/pacparser/'},'here'),
+	').',p;
 
 # parent is done!
 print end_html;
