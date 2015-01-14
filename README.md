@@ -1,6 +1,6 @@
 # [pactester-cgi](https://github.com/bennettp123/pactester-cgi)
 
-CGI frontend to pactester: https://code.google.com/p/pacparser/
+CGI frontend to pactester: https://github.com/pacparser/pacparser
 
 Requires perl and pactester.
 
