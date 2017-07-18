@@ -1,0 +1,12 @@
+--- pacparser-1.3.7/src/Makefile
++++ pacparser-1.3.7-fixed/src/Makefile
+@@ -101,7 +101,7 @@
+ 
+ testpactester: pactester
+ 	echo "Running tests for pactester."
+-	NO_INTERNET=$(NO_INTERNET) ../tests/runtests.sh
++	NO_INTERNET=$(NO_INTERNET) /bin/sh ../tests/runtests.sh
+ 
+ docs:
+ 	../tools/generatedocs.sh
+
