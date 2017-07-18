@@ -476,9 +476,13 @@ if($sub) {
 DONE:
 
 # about
-print p,hr,p,'This tool uses the pactester&nbsp;utility by Manu&nbsp;Garg ',
+print p,hr,p,'Source: ',a({href=>'https://github.com/bennettp123/pactester-cgi'}, 'github.com/bennettp123/pactester-cgi');
+print br,'Docker images: ',a({href=>'https://hub.docker.com/r/bennettp123/pactester-web/'},'hub.docker.com/r/bennettp123/pactester-web');
+
+print p,'This tool uses the pactester&nbsp;utility by Manu&nbsp;Garg ',
 	'(available ',a({href=>'https://code.google.com/p/pacparser/'},'here'),
 	').',p;
+
 
 # parent is done!
 print end_html;
