@@ -10,7 +10,7 @@ RUN apk add --no-cache \
         perl-cgi \
         perl-net-dns \
         perl-uri \
-        sudo \
+        spawn-fcgi \
         tini \
         wget \
  && update-ca-certificates \
@@ -26,5 +26,5 @@ ENTRYPOINT ["/sbin/tini", "--"]
 COPY nginx-conf/*.conf /etc/nginx/conf.d/
 COPY pactester.cgi /usr/lib/cgi-bin/pactester-cgi/pactester.cgi
 
-CMD ["/bin/sh", "-c", "sudo -u nginx sh -c 'while true; do /usr/bin/fcgiwrap -s unix:/tmp/fcgiwrap.socket; done' & exec nginx -g 'daemon off;'"]
+CMD ["/bin/sh", "-c", "spawn-fcgi -s /tmp/fcgiwrap.socket -U nginx -u nginx /usr/bin/fcgiwrap && exec nginx -g 'daemon off;'"]
 
