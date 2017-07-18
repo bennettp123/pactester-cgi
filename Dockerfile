@@ -26,5 +26,5 @@ ENTRYPOINT ["/sbin/tini", "--"]
 COPY nginx-conf/*.conf /etc/nginx/conf.d/
 COPY pactester.cgi /usr/lib/cgi-bin/pactester-cgi/pactester.cgi
 
-CMD ["/bin/sh", "-c", "spawn-fcgi -s /tmp/fcgiwrap.socket -U nginx -u nginx /usr/bin/fcgiwrap && exec nginx -g 'daemon off;'"]
+CMD ["/bin/sh", "-c", "spawn-fcgi -s /run/fcgiwrap.socket -U nginx -u nginx /usr/bin/fcgiwrap && exec nginx -g 'daemon off;'"]
 
