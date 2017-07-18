@@ -1,4 +1,4 @@
-#!/usr/bin/perl -T
+#!/usr/bin/perl
 
 # Author:  (c) 2013 Bennett Perkins
 #
@@ -29,6 +29,9 @@ use URI;
 use Net::DNS::Resolver;
 use strict;
 use warnings;
+
+# hardcoded settings
+$File::Fetch::TIMEOUT = 7;
 
 # domain search
 my @search_domains =  ( 'schools.internal',
