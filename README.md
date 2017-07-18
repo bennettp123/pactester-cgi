@@ -4,7 +4,13 @@ CGI frontend to pactester: https://github.com/pacparser/pacparser
 
 Requires perl and pactester.
 
-### installation
+### quickstart
+
+```
+docker run --rm -it -p 80:80 bennettp123/pactester-web:latest
+```
+
+### manual installation
 
 1. Copy pactester.cgi to /usr/lib/cgi-bin/pactester/pactester.cgi
 2. Add the following to httpd.conf:
