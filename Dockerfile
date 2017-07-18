@@ -1,7 +1,6 @@
 FROM nginx:1.12.1-alpine-perl
 COPY patches/*.patch /tmp/
 RUN apk add --no-cache \
-        bind-tools \
         build-base \
         ca-certificates \
         fcgiwrap \
