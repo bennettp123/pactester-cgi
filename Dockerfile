@@ -21,6 +21,12 @@ RUN apk add --no-cache \
              cd src && \
              make && \
              make install' \
+ && apk del --purge \
+        build-base \
+        ca-certificates \
+        make \
+        openssl \
+        wget \
  && rm -rf pacparser* /tmp/*.patch
 ENTRYPOINT ["/sbin/tini", "--"]
 COPY nginx-conf/*.conf /etc/nginx/conf.d/
