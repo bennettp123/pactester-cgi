@@ -4,7 +4,7 @@ RUN apt-get update && apt-get install -y \
         fcgiwrap \
         libcgi-pm-perl \
         libnet-dns-perl \
-        liburi-pm-perl \
+        liburi-perl \
         nginx \
         perl \
         spawn-fcgi \
@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y \
  && wget https://github.com/krallin/tini/releases/download/v0.14.0/tini-armhf.asc -O /tini.asc \
  && gpg --keyserver ha.pool.sks-keyservers.net --recv-keys 595E85A6B1B4779EA4DAAEC70B588DFF0527A9B7 \
  && gpg --verify /tini.asc \
+ && chmod +x /tini \
  && wget https://github.com/pacparser/pacparser/releases/download/1.3.7/pacparser-1.3.7.tar.gz -O pacparser-1.3.7.tar.gz \
  && sh -c 'tar xzf pacparser-1.3.7.tar.gz && \
              cd pacparser*/src && \
@@ -22,10 +23,13 @@ RUN apt-get update && apt-get install -y \
         build-essential \
         wget \
  && apt-get autoremove -y \
- && rm -rf pacparser* /var/lib/apt/lists/* /etc/nginx/sites-enabled/*
+ && rm -rf pacparser* /var/lib/apt/lists/* /etc/nginx/sites-enabled/* /root/.gnupg \
+ && ln -sf /dev/stdout /var/log/nginx/access.log \
+ && ln -sf /dev/stderr /var/log/nginx/error.log
+EXPOSE 80
 ENTRYPOINT ["/tini", "--"]
 COPY nginx-conf/*.conf /etc/nginx/conf.d/
 COPY pactester.cgi /usr/lib/cgi-bin/pactester-cgi/pactester.cgi
 
-CMD ["/bin/sh", "-c", "spawn-fcgi -s /run/fcgiwrap.socket -U nginx -u nginx /usr/bin/fcgiwrap && exec nginx -g 'daemon off;'"]
+CMD ["/bin/sh", "-c", "spawn-fcgi -s /run/fcgiwrap.socket -U www-data /usr/sbin/fcgiwrap && exec nginx -g 'daemon off;'"]
 
