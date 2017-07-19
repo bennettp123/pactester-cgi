@@ -1,27 +1,29 @@
 FROM arm32v7/debian:9.0
-RUN apk add --no-cache \
-        build-base \
-        ca-certificates \
+RUN apt-get update && apt-get install -y \
+        build-essential \
         fcgiwrap \
-        make \
-        openssl \
-        perl-carp \
-        perl-cgi \
-        perl-net-dns \
-        perl-uri \
+        libcgi-pm-perl \
+        libnet-dns-perl \
+        liburi-pm-perl \
+        nginx \
+        perl \
         spawn-fcgi \
-        tini \
         wget \
- && update-ca-certificates \
+ && wget https://github.com/krallin/tini/releases/download/v0.14.0/tini-armhf -O /tini \
+ && wget https://github.com/krallin/tini/releases/download/v0.14.0/tini-armhf.asc -O /tini.asc \
+ && gpg --keyserver ha.pool.sks-keyservers.net --recv-keys 595E85A6B1B4779EA4DAAEC70B588DFF0527A9B7 \
+ && gpg --verify /tini.asc \
  && wget https://github.com/pacparser/pacparser/releases/download/1.3.7/pacparser-1.3.7.tar.gz -O pacparser-1.3.7.tar.gz \
  && sh -c 'tar xzf pacparser-1.3.7.tar.gz && \
-             cd pacparser* && \
-             cat /tmp/*.patch | patch -p1 && \
-             cd src && \
+             cd pacparser*/src && \
              make && \
              make install' \
- && rm -rf pacparser* /tmp/*.patch
-ENTRYPOINT ["/sbin/tini", "--"]
+ && apt-get remove -y \
+        build-essential \
+        wget \
+ && apt-get autoremove -y \
+ && rm -rf pacparser* /var/lib/apt/lists/* /etc/nginx/sites-enabled/*
+ENTRYPOINT ["/tini", "--"]
 COPY nginx-conf/*.conf /etc/nginx/conf.d/
 COPY pactester.cgi /usr/lib/cgi-bin/pactester-cgi/pactester.cgi
 
