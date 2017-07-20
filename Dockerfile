@@ -1,5 +1,5 @@
 FROM nginx:1.12.1-alpine-perl
-COPY patches/*.patch /tmp/
+COPY alpine-patches/*.patch /tmp/
 RUN apk add --no-cache \
         build-base \
         ca-certificates \
